@@ -1,3 +1,4 @@
+
 n = int(input())
 arr = list(map(int, input().split()))
 
@@ -10,3 +11,4 @@ for i in range(1, n):
         pos = i + 1   # +1 because positions start from 1
 
 print(pos)
+print("hello")
