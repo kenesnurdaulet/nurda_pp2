@@ -30,8 +30,8 @@ print("4:", re.findall(pattern4, "Hello world Test Python PYTHON"))
 
 # 5. Match 'a' followed by anything, ending with 'b'
 
-pattern5 = r"a.*b"
-print("5:", re.findall(pattern5, "acb a123b ab axxxb"))
+pattern = r"a[^ ]*b"
+print(re.findall(pattern, "acb a123b afc axxxb"))
 
 
 
