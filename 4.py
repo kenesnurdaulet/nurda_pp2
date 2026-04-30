@@ -34,7 +34,7 @@ food = generate_food()
 score = 0
 level = 1
 foods_to_next_level = 3
-speed = 7
+speed = 4
 
 def draw_snake():
     for i, block in enumerate(snake):
@@ -109,4 +109,3 @@ while True:
 
     pygame.display.update()
     clock.tick(speed) 
-    
