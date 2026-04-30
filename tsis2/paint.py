@@ -1,135 +1,159 @@
 import pygame
 import sys
 import datetime
-from tools import flood_fill
+from tools import draw_line, flood_fill, draw_shape
 
 pygame.init()
 
-WIDTH, HEIGHT = 800, 600
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Paint TSIS2")
+# ---------- SCREEN ----------
+WIDTH, HEIGHT = 1000, 700
+TOOLBAR = 180
 
-canvas = pygame.Surface((WIDTH, HEIGHT))
-canvas.fill((255, 255, 255))
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Paint TSIS 2 FIXED")
 
 clock = pygame.time.Clock()
 
-# ---------------- SETTINGS ----------------
-color = (0, 0, 0)
-brush_size = 2
+# ---------- COLORS ----------
+WHITE = (255,255,255)
+BLACK = (0,0,0)
+GRAY = (200,200,200)
+DARK = (40,40,40)
+BLUE = (0,120,215)
 
-# tools: pencil, line, fill, text
+PALETTE = [
+    (0,0,0),(255,255,255),(255,0,0),(0,255,0),
+    (0,0,255),(255,255,0),(255,165,0),(128,0,128)
+]
+
+# ---------- CANVAS ----------
+canvas = pygame.Surface((WIDTH-TOOLBAR, HEIGHT))
+canvas.fill(WHITE)
+
+# ---------- STATE ----------
 tool = "pencil"
-tool = "ereaser"
+color = BLACK
+brush_size = 5
 
 drawing = False
 start_pos = None
 last_pos = None
 
-# ---------------- TEXT ----------------
-font = pygame.font.SysFont("Arial", 24)
+# TEXT
 text_mode = False
 text_input = ""
-text_pos = (0, 0)
+text_pos = (0,0)
 
-# ---------------- MAIN LOOP ----------------
+font = pygame.font.SysFont("Verdana", 18)
+font_big = pygame.font.SysFont("Verdana", 24)
+
+TOOLS = ["pencil","line","rect","circle","square","rtriangle","eqtriangle","rhombus","fill","text","erase"]
+
+# ---------- UI ----------
+def draw_ui():
+    pygame.draw.rect(screen, DARK, (0,0,TOOLBAR,HEIGHT))
+
+    for i,t in enumerate(TOOLS):
+        rect = pygame.Rect(10,10+i*35,160,30)
+        c = BLUE if t==tool else GRAY
+        pygame.draw.rect(screen,c,rect)
+        screen.blit(font.render(t,True,BLACK),(20,15+i*35))
+
+    for i,c in enumerate(PALETTE):
+        pygame.draw.rect(screen,c,(10+(i%2)*70,450+(i//2)*40,60,30))
+
+# ---------- SAVE ----------
+def save_canvas():
+    name=f"paint_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    pygame.image.save(canvas,name)
+
+# ---------- MAIN ----------
 while True:
-    screen.blit(canvas, (0, 0))
+    screen.fill(WHITE)
+    screen.blit(canvas,(TOOLBAR,0))
+    draw_ui()
 
-    # preview line
-    if tool == "line" and drawing and start_pos:
-        temp = canvas.copy()
-        pygame.draw.line(temp, color, start_pos, pygame.mouse.get_pos(), brush_size)
-        screen.blit(temp, (0, 0))
+    mouse = pygame.mouse.get_pos()
+    canvas_pos = (mouse[0]-TOOLBAR, mouse[1])
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
 
-        # -------- KEYBOARD --------
+        # KEYBOARD
         if event.type == pygame.KEYDOWN:
 
-            # BRUSH SIZE
-            if event.key == pygame.K_1:
-                brush_size = 2
-            if event.key == pygame.K_2:
-                brush_size = 5
-            if event.key == pygame.K_3:
-                brush_size = 10
+            if event.key == pygame.K_1: brush_size=2
+            if event.key == pygame.K_2: brush_size=5
+            if event.key == pygame.K_3: brush_size=10
 
-            # TOOLS
-            if event.key == pygame.K_p:
-                tool = "pencil"
-            if event.key == pygame.K_l:
-                tool = "line"
-            if event.key == pygame.K_f:
-                tool = "fill"
-            if event.key == pygame.K_t:
-                tool = "text"
-            if event.key == pygame.K_e:
-                tool = "eraser"
-
-            # SAVE
             if event.key == pygame.K_s and pygame.key.get_mods() & pygame.KMOD_CTRL:
-                filename = datetime.datetime.now().strftime("drawing_%Y%m%d_%H%M%S.png")
-                pygame.image.save(canvas, filename)
-                print("Saved:", filename)
+                save_canvas()
 
-            # TEXT INPUT
             if text_mode:
                 if event.key == pygame.K_RETURN:
-                    text_surface = font.render(text_input, True, color)
-                    canvas.blit(text_surface, text_pos)
-                    text_mode = False
-                    text_input = ""
-
+                    img = font_big.render(text_input,True,color)
+                    canvas.blit(img,text_pos)
+                    text_mode=False
+                    text_input=""
                 elif event.key == pygame.K_ESCAPE:
-                    text_mode = False
-                    text_input = ""
-
-                elif event.key == pygame.K_BACKSPACE:
-                    text_input = text_input[:-1]
-
+                    text_mode=False
+                    text_input=""
                 else:
-                    text_input += event.unicode
+                    text_input+=event.unicode
 
-        # -------- MOUSE --------
+        # MOUSE DOWN
         if event.type == pygame.MOUSEBUTTONDOWN:
-            x, y = event.pos
+            x,y = event.pos
 
-            if tool == "fill":
-                flood_fill(canvas, x, y, color)
+            if x < TOOLBAR:
+                idx=(y-10)//35
+                if 0<=idx<len(TOOLS):
+                    tool=TOOLS[idx]
 
-            elif tool == "text":
-                text_mode = True
-                text_input = ""
-                text_pos = (x, y)
-
+                for i,c in enumerate(PALETTE):
+                    px=10+(i%2)*70
+                    py=450+(i//2)*40
+                    if px<=x<=px+60 and py<=y<=py+30:
+                        color=c
             else:
-                drawing = True
-                start_pos = event.pos
-                last_pos = event.pos
+                if tool=="fill":
+                    flood_fill(canvas,*canvas_pos,color)
+                elif tool=="text":
+                    text_mode=True
+                    text_pos=canvas_pos
+                    text_input=""
+                else:
+                    drawing=True
+                    start_pos=canvas_pos
+                    last_pos=canvas_pos
 
+        # MOUSE UP
         if event.type == pygame.MOUSEBUTTONUP:
-            drawing = False
+            if drawing:
+                if tool not in ["pencil","erase"]:
+                    draw_shape(canvas,tool,start_pos,canvas_pos,color,brush_size)
+                drawing=False
 
-            if tool == "line" and start_pos:
-                pygame.draw.line(canvas, color, start_pos, event.pos, brush_size)
-
+        # DRAW
         if event.type == pygame.MOUSEMOTION and drawing:
-           if tool == "pencil":
-             pygame.draw.line(canvas, color, last_pos, event.pos, brush_size)
-             last_pos = event.pos
+            if tool=="pencil":
+                draw_line(canvas,color,last_pos,canvas_pos,brush_size)
+                last_pos=canvas_pos
+            elif tool=="erase":
+                pygame.draw.line(canvas, WHITE, last_pos, canvas_pos, brush_size*2)
+    # ---------- FIXED PREVIEW ----------
+    if drawing and tool not in ["pencil","erase"]:
+        start_screen = (start_pos[0]+TOOLBAR, start_pos[1])
+        current_screen = (canvas_pos[0]+TOOLBAR, canvas_pos[1])
 
-           elif tool == "eraser":
-             pygame.draw.line(canvas, (255, 255, 255), last_pos, event.pos, brush_size*2)
-             last_pos = event.pos
+        draw_shape(screen,tool,start_screen,current_screen,color,brush_size)
 
-    # show typing text preview
+    # TEXT PREVIEW
     if text_mode:
-        preview = font.render(text_input, True, color)
-        screen.blit(preview, text_pos)
+        preview=font_big.render(text_input+"|",True,color)
+        screen.blit(preview,(text_pos[0]+TOOLBAR,text_pos[1]))
 
     pygame.display.update()
     clock.tick(60)

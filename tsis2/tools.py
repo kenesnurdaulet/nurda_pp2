@@ -1,29 +1,53 @@
 import pygame
-from collections import deque
+import math
 
-# ---------------- FLOOD FILL ----------------
+def draw_line(surface, color, start, end, width):
+    pygame.draw.line(surface, color, start, end, width)
+
 def flood_fill(surface, x, y, new_color):
-    width, height = surface.get_size()
-    target_color = surface.get_at((x, y))
-
-    if target_color == new_color:
+    target = surface.get_at((x,y))
+    if target == new_color:
         return
 
-    queue = deque()
-    queue.append((x, y))
+    stack = [(x,y)]
+    w,h = surface.get_size()
 
-    while queue:
-        px, py = queue.popleft()
+    while stack:
+        px,py = stack.pop()
+        if 0<=px<w and 0<=py<h:
+            if surface.get_at((px,py)) == target:
+                surface.set_at((px,py), new_color)
+                stack.extend([(px+1,py),(px-1,py),(px,py+1),(px,py-1)])
 
-        if px < 0 or px >= width or py < 0 or py >= height:
-            continue
+def draw_shape(surface, tool, p1, p2, color, size):
+    x1,y1 = p1
+    x2,y2 = p2
 
-        if surface.get_at((px, py)) != target_color:
-            continue
+    if tool == "line":
+        pygame.draw.line(surface, color, p1, p2, size)
 
-        surface.set_at((px, py), new_color)
+    elif tool == "rect":
+        pygame.draw.rect(surface, color,
+            pygame.Rect(min(x1,x2),min(y1,y2),abs(x2-x1),abs(y2-y1)), size)
 
-        queue.append((px + 1, py))
-        queue.append((px - 1, py))
-        queue.append((px, py + 1))
-        queue.append((px, py - 1))
+    elif tool == "circle":
+        r = int(math.hypot(x2-x1,y2-y1))
+        pygame.draw.circle(surface, color, p1, r, size)
+
+    elif tool == "square":
+        s = min(abs(x2-x1),abs(y2-y1))
+        pygame.draw.rect(surface, color, (x1,y1,s,s), size)
+
+    elif tool == "rtriangle":
+        pygame.draw.polygon(surface, color, [(x1,y1),(x2,y1),(x2,y2)], size)
+
+    elif tool == "eqtriangle":
+        s = math.hypot(x2-x1,y2-y1)
+        h = (math.sqrt(3)/2)*s
+        pygame.draw.polygon(surface, color, [(x1,y1),(x2,y2),(x1,y1-h)], size)
+
+    elif tool == "rhombus":
+        mx,my = (x1+x2)//2,(y1+y2)//2
+        dx,dy = abs(x2-x1)//2,abs(y2-y1)//2
+        pts = [(mx,my-dy),(mx+dx,my),(mx,my+dy),(mx-dx,my)]
+        pygame.draw.polygon(surface, color, pts, size)
